@@ -63,15 +63,11 @@ impl ProfitAndLoss {
     }
 }
 
-pub fn execute(path: &Path) {
-    match read_profit_and_loss(path) {
-        Ok(result) => {
-            for profit_and_loss in result {
-                println!("{profit_and_loss:?}");
-            }
-        }
-        Err(err) => println!("エラー: {err}"),
+pub fn execute(path: &Path) -> Result<(), Box<dyn Error>> {
+    for profit_and_loss in read_profit_and_loss(path)? {
+        println!("{profit_and_loss:?}");
     }
+    Ok(())
 }
 
 fn read_profit_and_loss(path: &Path) -> Result<Vec<ProfitAndLoss>, Box<dyn Error>> {
