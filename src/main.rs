@@ -1,5 +1,5 @@
 use clap::Parser;
-use modules::profit_and_loss_csv;
+use modules::profit_and_loss;
 use std::error::Error;
 use std::path::PathBuf;
 
@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match args.csv_file {
         Some(csv_file) => {
-            if let Err(err) = profit_and_loss_csv::execute(&csv_file) {
+            if let Err(err) = profit_and_loss::execute(&csv_file) {
                 eprintln!("エラー: {}", err);
                 std::process::exit(1);
             }
