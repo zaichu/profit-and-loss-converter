@@ -87,44 +87,35 @@ fn update_excelsheet(
     profit_and_loss: Vec<ProfitAndLoss>,
     xlsx_filepath: &Path,
 ) -> Result<(), Box<dyn Error>> {
-    let xlsx = Path::new(xlsx_filepath);
-    let mut book = reader::xlsx::read(xlsx)?;
     let sheet_name = "株取引";
+    let orange = "FFF8CBAD";
+    let green = "FFC5E0B4";
 
-    /*
-       let sheet = book.get_sheet_by_name_mut(sheet_name);
-       if let Some(sheet) = sheet {
-           let cell = sheet.get_cell_mut((1, 1));
-           let style = cell.get_style_mut();
-           let color = style.get_background_color();
-           println!("{color:?}");
-       }
-    */
-
+    let mut book = reader::xlsx::read(xlsx_filepath)?;
     if book.get_sheet_by_name(sheet_name).is_some() {
         book.remove_sheet_by_name(sheet_name)?;
     }
 
     let new_sheet = book.new_sheet(sheet_name)?;
-
     let cell = new_sheet.get_cell_mut((2, 2));
     cell.set_value("value");
     let style = cell.get_style_mut();
-
-    let green = "FFC5E0B4";
-    let orange = "FFF8CBAD";
     style.set_background_color(orange);
     let borders = style.get_borders_mut();
-    let border = borders.get_bottom_border_mut();
-    border.set_border_style(Border::BORDER_THIN);
-    let border = borders.get_left_border_mut();
-    border.set_border_style(Border::BORDER_THIN);
-    let border = borders.get_right_border_mut();
-    border.set_border_style(Border::BORDER_THIN);
-    let border = borders.get_top_border_mut();
-    border.set_border_style(Border::BORDER_THIN);
+    borders
+        .get_bottom_border_mut()
+        .set_border_style(Border::BORDER_THIN);
+    borders
+        .get_left_border_mut()
+        .set_border_style(Border::BORDER_THIN);
+    borders
+        .get_right_border_mut()
+        .set_border_style(Border::BORDER_THIN);
+    borders
+        .get_top_border_mut()
+        .set_border_style(Border::BORDER_THIN);
 
-    writer::xlsx::write(&book, xlsx)?;
+    writer::xlsx::write(&book, xlsx_filepath)?;
 
     Ok(())
 }
