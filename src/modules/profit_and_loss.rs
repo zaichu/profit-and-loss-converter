@@ -1,7 +1,9 @@
 use chrono::NaiveDate;
+use core::borrow;
 use csv::StringRecord;
 use std::error::Error;
 use std::path::Path;
+use umya_spreadsheet::{reader, writer, Border};
 
 #[derive(Debug, Clone)]
 pub struct ProfitAndLoss {
@@ -63,20 +65,66 @@ impl ProfitAndLoss {
     }
 }
 
-pub fn execute(path: &Path) -> Result<(), Box<dyn Error>> {
-    for profit_and_loss in read_profit_and_loss(path)? {
-        println!("{profit_and_loss:?}");
-    }
+pub fn execute(csv_filepath: &Path, xlsx_filepath: &Path) -> Result<(), Box<dyn Error>> {
+    let profit_and_loss = read_profit_and_loss(csv_filepath)?;
+    update_excelsheet(profit_and_loss, xlsx_filepath)?;
+
     Ok(())
 }
 
-fn read_profit_and_loss(path: &Path) -> Result<Vec<ProfitAndLoss>, Box<dyn Error>> {
+fn read_profit_and_loss(csv_filepath: &Path) -> Result<Vec<ProfitAndLoss>, Box<dyn Error>> {
     let mut result = Vec::new();
-    let mut reader = csv::Reader::from_path(path)?;
+    let mut reader = csv::Reader::from_path(csv_filepath)?;
 
     for record in reader.records() {
         result.push(ProfitAndLoss::new(record?)?);
     }
 
     Ok(result)
+}
+
+fn update_excelsheet(
+    profit_and_loss: Vec<ProfitAndLoss>,
+    xlsx_filepath: &Path,
+) -> Result<(), Box<dyn Error>> {
+    let xlsx = Path::new(xlsx_filepath);
+    let mut book = reader::xlsx::read(xlsx)?;
+    let sheet_name = "株取引";
+
+    /*
+       let sheet = book.get_sheet_by_name_mut(sheet_name);
+       if let Some(sheet) = sheet {
+           let cell = sheet.get_cell_mut((1, 1));
+           let style = cell.get_style_mut();
+           let color = style.get_background_color();
+           println!("{color:?}");
+       }
+    */
+
+    if book.get_sheet_by_name(sheet_name).is_some() {
+        book.remove_sheet_by_name(sheet_name)?;
+    }
+
+    let new_sheet = book.new_sheet(sheet_name)?;
+
+    let cell = new_sheet.get_cell_mut((2, 2));
+    cell.set_value("value");
+    let style = cell.get_style_mut();
+
+    let green = "FFC5E0B4";
+    let orange = "FFF8CBAD";
+    style.set_background_color(orange);
+    let borders = style.get_borders_mut();
+    let border = borders.get_bottom_border_mut();
+    border.set_border_style(Border::BORDER_THIN);
+    let border = borders.get_left_border_mut();
+    border.set_border_style(Border::BORDER_THIN);
+    let border = borders.get_right_border_mut();
+    border.set_border_style(Border::BORDER_THIN);
+    let border = borders.get_top_border_mut();
+    border.set_border_style(Border::BORDER_THIN);
+
+    writer::xlsx::write(&book, xlsx)?;
+
+    Ok(())
 }
