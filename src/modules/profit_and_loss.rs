@@ -1,8 +1,6 @@
 use chrono::NaiveDate;
 use csv::StringRecord;
 use std::error::Error;
-use std::path::Path;
-use umya_spreadsheet::{reader, writer, Border};
 
 #[derive(Debug, Clone)]
 pub struct ProfitAndLoss {
@@ -62,59 +60,4 @@ impl ProfitAndLoss {
             .to_string();
         Ok(value.unwrap().to_string())
     }
-}
-
-pub fn execute(csv_filepath: &Path, xlsx_filepath: &Path) -> Result<(), Box<dyn Error>> {
-    let profit_and_loss = read_profit_and_loss(csv_filepath)?;
-    update_excelsheet(profit_and_loss, xlsx_filepath)?;
-
-    Ok(())
-}
-
-fn read_profit_and_loss(csv_filepath: &Path) -> Result<Vec<ProfitAndLoss>, Box<dyn Error>> {
-    let mut result = Vec::new();
-    let mut reader = csv::Reader::from_path(csv_filepath)?;
-
-    for record in reader.records() {
-        result.push(ProfitAndLoss::new(record?)?);
-    }
-
-    Ok(result)
-}
-
-fn update_excelsheet(
-    profit_and_loss: Vec<ProfitAndLoss>,
-    xlsx_filepath: &Path,
-) -> Result<(), Box<dyn Error>> {
-    let sheet_name = "株取引";
-    let orange = "FFF8CBAD";
-    let green = "FFC5E0B4";
-
-    let mut book = reader::xlsx::read(xlsx_filepath)?;
-    if book.get_sheet_by_name(sheet_name).is_some() {
-        book.remove_sheet_by_name(sheet_name)?;
-    }
-
-    let new_sheet = book.new_sheet(sheet_name)?;
-    let cell = new_sheet.get_cell_mut((2, 2));
-    cell.set_value("value");
-    let style = cell.get_style_mut();
-    style.set_background_color(orange);
-    let borders = style.get_borders_mut();
-    borders
-        .get_bottom_border_mut()
-        .set_border_style(Border::BORDER_THIN);
-    borders
-        .get_left_border_mut()
-        .set_border_style(Border::BORDER_THIN);
-    borders
-        .get_right_border_mut()
-        .set_border_style(Border::BORDER_THIN);
-    borders
-        .get_top_border_mut()
-        .set_border_style(Border::BORDER_THIN);
-
-    writer::xlsx::write(&book, xlsx_filepath)?;
-
-    Ok(())
 }

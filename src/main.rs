@@ -1,8 +1,8 @@
 use clap::Parser;
-use modules::profit_and_loss;
+use modules::csv_reader::CSVReader;
+use modules::excel_writer::ExcelWriter;
 use std::error::Error;
 use std::path::PathBuf;
-use umya_spreadsheet::reader::xlsx;
 
 mod modules;
 
@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     match (args.csv_filepath, args.xlsx_filepath) {
         (Some(csv_filepath), Some(xlsx_filepath)) => {
-            if let Err(err) = profit_and_loss::execute(&csv_filepath, &xlsx_filepath) {
+            if let Err(err) = execute(csv_filepath, xlsx_filepath) {
                 eprintln!("エラー: {}", err);
                 std::process::exit(1);
             }
@@ -30,6 +30,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             std::process::exit(1);
         }
     }
+
+    Ok(())
+}
+
+fn execute(csv_filepath: PathBuf, xlsx_filepath: PathBuf) -> Result<(), Box<dyn Error>> {
+    let profit_and_loss = CSVReader::read_profit_and_loss(&csv_filepath)?;
+    ExcelWriter::update_sheet(profit_and_loss, &xlsx_filepath)?;
 
     Ok(())
 }
