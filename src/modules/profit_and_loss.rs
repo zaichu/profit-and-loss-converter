@@ -17,6 +17,8 @@ pub struct ProfitAndLoss {
 }
 
 impl ProfitAndLoss {
+    const YEN_FORMAT: &'static str = "\"¥\"#,##0.00;\"¥\"-#,##0.00";
+
     pub fn new(record: StringRecord) -> Result<Self, Box<dyn Error>> {
         Ok(ProfitAndLoss {
             trade_date: Self::parse_date("trade_date", record.get(0))?,
@@ -32,18 +34,30 @@ impl ProfitAndLoss {
         })
     }
 
-    pub fn get_profit_and_loss_list(&self) -> [String; 10] {
+    pub fn get_profit_and_loss_list(&self) -> [(String, Option<String>); 10] {
         [
-            self.trade_date.to_string(),
-            self.settlement_date.to_string(),
-            self.securities_code.clone(),
-            self.company_name.clone(),
-            self.account.clone(),
-            self.shares.to_string(),
-            self.asked_price.to_string(),
-            self.settlement_amount.to_string(),
-            self.purchase_price.to_string(),
-            self.profit_and_loss.to_string(),
+            (self.trade_date.to_string(), None),
+            (self.settlement_date.to_string(), None),
+            (self.securities_code.clone(), None),
+            (self.company_name.clone(), None),
+            (self.account.clone(), None),
+            (self.shares.to_string(), None),
+            (
+                self.asked_price.to_string(),
+                Some(Self::YEN_FORMAT.to_string()),
+            ),
+            (
+                self.settlement_amount.to_string(),
+                Some(Self::YEN_FORMAT.to_string()),
+            ),
+            (
+                self.purchase_price.to_string(),
+                Some(Self::YEN_FORMAT.to_string()),
+            ),
+            (
+                self.profit_and_loss.to_string(),
+                Some(Self::YEN_FORMAT.to_string()),
+            ),
         ]
     }
 

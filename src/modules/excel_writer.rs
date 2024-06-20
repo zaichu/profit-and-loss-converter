@@ -42,9 +42,9 @@ impl ExcelWriter {
 
         for index in 2..=Self::HEADER.len() {
             let col = index as u32;
-            let res = new_sheet
+            new_sheet
                 .get_column_dimension_by_number_mut(&col)
-                .get_auto_width();
+                .set_width(15.0);
         }
 
         writer::xlsx::write(&book, xlsx_filepath)?;
@@ -69,16 +69,29 @@ impl ExcelWriter {
         for (row, record) in profit_and_loss.iter().enumerate() {
             let row_index = row as u32 + add_row;
 
-            for (col_index, value) in record.get_profit_and_loss_list().iter().enumerate() {
+            for (col_index, (value, format)) in record.get_profit_and_loss_list().iter().enumerate()
+            {
                 let col_index = col_index as u32 + Self::START_COL;
-                Self::write_value(sheet, (col_index, row_index), value.clone());
+                Self::write_value(sheet, (col_index, row_index), value.clone(), format.clone());
             }
         }
         Ok(())
     }
 
-    fn write_value(sheet: &mut Worksheet, coordinate: (u32, u32), value: String) {
-        sheet.get_cell_mut(coordinate).set_value(value);
+    fn write_value(
+        sheet: &mut Worksheet,
+        coordinate: (u32, u32),
+        value: String,
+        format: Option<String>,
+    ) {
+        let cell = sheet.get_cell_mut(coordinate);
+        cell.set_value(value);
+
+        if let Some(format) = format {
+            cell.get_style_mut()
+                .get_number_format_mut()
+                .set_format_code(format);
+        }
     }
 
     fn apply_style(cell: &mut Cell, color: &str) {
