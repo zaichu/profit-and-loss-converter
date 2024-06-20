@@ -74,6 +74,10 @@ impl ExcelWriter {
                 let col_index = col_index as u32 + Self::START_COL;
                 Self::write_value(sheet, (col_index, row_index), value.clone(), format.clone());
             }
+
+            let col_index = record.get_profit_and_loss_list().len() as u32;
+            Self::write_value(sheet, (col_index + 2, row_index), "-".to_string(), None);
+            Self::write_value(sheet, (col_index + 3, row_index), "-".to_string(), None);
         }
         Ok(())
     }
@@ -92,6 +96,8 @@ impl ExcelWriter {
                 .get_number_format_mut()
                 .set_format_code(format);
         }
+
+        Self::apply_style(cell, Self::COLOR_WHITE);
     }
 
     fn apply_style(cell: &mut Cell, color: &str) {
