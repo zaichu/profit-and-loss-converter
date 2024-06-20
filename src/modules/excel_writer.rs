@@ -1,7 +1,7 @@
 use super::profit_and_loss::ProfitAndLoss;
 use std::error::Error;
 use std::path::Path;
-use umya_spreadsheet::*;
+use umya_spreadsheet::{self, reader, writer, Border, Cell, Worksheet};
 
 pub struct ExcelWriter;
 
@@ -9,7 +9,9 @@ impl ExcelWriter {
     const SHEET_NAME: &'static str = "株取引";
     const COLOR_ORANGE: &'static str = "FFF8CBAD";
     const COLOR_GREEN: &'static str = "FFC5E0B4";
-    const COLOR_WHITE: &'static str = "FFFFFFFF";
+    const COLOR_WHITE: &'static str = "FF000000";
+    const START_ROW: u32 = 2;
+    const START_COL: u32 = 2;
     const HEADER: &'static [&'static str] = &[
         "約定日",
         "受渡日",
@@ -34,8 +36,16 @@ impl ExcelWriter {
             book.remove_sheet_by_name(Self::SHEET_NAME)?;
         }
 
-        let new_sheet = book.new_sheet(Self::SHEET_NAME)?;
-        Self::write_header(new_sheet);
+        let mut new_sheet = book.new_sheet(Self::SHEET_NAME)?;
+        Self::write_header(&mut new_sheet);
+        Self::write_profit_and_loss(&mut new_sheet, profit_and_loss)?;
+
+        for index in 2..=Self::HEADER.len() {
+            let col = index as u32;
+            let res = new_sheet
+                .get_column_dimension_by_number_mut(&col)
+                .get_auto_width();
+        }
 
         writer::xlsx::write(&book, xlsx_filepath)?;
 
@@ -43,14 +53,35 @@ impl ExcelWriter {
     }
 
     fn write_header(sheet: &mut Worksheet) {
-        for (index, header) in Self::HEADER.iter().enumerate() {
-            let cell = sheet.get_cell_mut((index as u32 + 2, 2));
+        for (col_index, header) in Self::HEADER.iter().enumerate() {
+            let col_index = col_index as u32 + Self::START_COL;
+            let cell = sheet.get_cell_mut((col_index, Self::START_ROW));
             cell.set_value(header.to_string());
             Self::apply_style(cell, Self::COLOR_ORANGE);
         }
     }
 
-    fn apply_style(cell: &mut umya_spreadsheet::Cell, color: &str) {
+    fn write_profit_and_loss(
+        sheet: &mut Worksheet,
+        profit_and_loss: Vec<ProfitAndLoss>,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut add_row = Self::START_ROW + 1;
+        for (row, record) in profit_and_loss.iter().enumerate() {
+            let row_index = row as u32 + add_row;
+
+            for (col_index, value) in record.get_profit_and_loss_list().iter().enumerate() {
+                let col_index = col_index as u32 + Self::START_COL;
+                Self::write_value(sheet, (col_index, row_index), value.clone());
+            }
+        }
+        Ok(())
+    }
+
+    fn write_value(sheet: &mut Worksheet, coordinate: (u32, u32), value: String) {
+        sheet.get_cell_mut(coordinate).set_value(value);
+    }
+
+    fn apply_style(cell: &mut Cell, color: &str) {
         let style = cell.get_style_mut();
         style.set_background_color(color);
 

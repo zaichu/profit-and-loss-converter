@@ -32,6 +32,21 @@ impl ProfitAndLoss {
         })
     }
 
+    pub fn get_profit_and_loss_list(&self) -> [String; 10] {
+        [
+            self.trade_date.to_string(),
+            self.settlement_date.to_string(),
+            self.securities_code.clone(),
+            self.company_name.clone(),
+            self.account.clone(),
+            self.shares.to_string(),
+            self.asked_price.to_string(),
+            self.settlement_amount.to_string(),
+            self.purchase_price.to_string(),
+            self.profit_and_loss.to_string(),
+        ]
+    }
+
     fn parse_date(field_name: &str, date_str: Option<&str>) -> Result<NaiveDate, Box<dyn Error>> {
         let date_str = date_str.ok_or_else(|| format!("Missing {field_name} field"))?;
         NaiveDate::parse_from_str(date_str.replace("/", "-").as_str(), "%Y-%m-%d")
@@ -55,9 +70,7 @@ impl ProfitAndLoss {
     }
 
     fn parse_string(field_name: &str, value: Option<&str>) -> Result<String, Box<dyn Error>> {
-        value
-            .ok_or_else(|| format!("Missing {field_name} field"))?
-            .to_string();
-        Ok(value.unwrap().to_string())
+        let value = value.ok_or_else(|| format!("Missing {field_name} field"))?;
+        Ok(value.to_string())
     }
 }
