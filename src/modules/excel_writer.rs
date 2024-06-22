@@ -133,7 +133,7 @@ impl ExcelWriter {
         coordinate: (u32, u32),
         value: T,
         format: Option<&str>,
-        color: Option<&str>,
+        background_color: Option<&str>,
     ) {
         let cell = sheet.get_cell_mut(coordinate);
         cell.set_value(value.to_string());
@@ -144,7 +144,7 @@ impl ExcelWriter {
                 .set_format_code(format);
         }
 
-        Self::apply_style(cell, color.unwrap_or(Self::COLOR_WHITE));
+        Self::apply_style(cell, background_color.unwrap_or(Self::COLOR_WHITE));
     }
 
     fn apply_style(cell: &mut Cell, color: &str) {
