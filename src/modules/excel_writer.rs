@@ -1,5 +1,6 @@
 use super::profit_and_loss::ProfitAndLoss;
 use chrono::NaiveDate;
+
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::path::Path;
@@ -9,26 +10,12 @@ pub struct ExcelWriter;
 
 impl ExcelWriter {
     const SHEET_NAME: &'static str = "株取引";
-    const TAX_RATE: f64 = 0.20315;
+
     const COLOR_ORANGE: &'static str = "FFF8CBAD";
     const COLOR_GREEN: &'static str = "FFC5E0B4";
     const COLOR_WHITE: &'static str = "FF000000";
     const START_ROW: u32 = 2;
     const START_COL: u32 = 2;
-    const HEADER: &'static [&'static str] = &[
-        "約定日",
-        "受渡日",
-        "銘柄コード",
-        "銘柄名",
-        "口座",
-        "数量[株]",
-        "売却/決済単価[円]",
-        "売却/決済額[円]",
-        "平均取得価額[円]",
-        "実現損益[円]",
-        "源泉徴収税額",
-        "損益",
-    ];
 
     pub fn update_sheet(
         profit_and_loss_map: BTreeMap<NaiveDate, Vec<ProfitAndLoss>>,
@@ -43,7 +30,7 @@ impl ExcelWriter {
 
         Self::write_profit_and_loss(&mut new_sheet, profit_and_loss_map)?;
 
-        for index in 2..=Self::HEADER.len() {
+        for index in 2..=ProfitAndLoss::HEADER.len() {
             let col = index as u32;
             new_sheet
                 .get_column_dimension_by_number_mut(&col)
@@ -56,7 +43,7 @@ impl ExcelWriter {
     }
 
     fn write_header(sheet: &mut Worksheet) {
-        for (col_index, header) in Self::HEADER.iter().enumerate() {
+        for (col_index, header) in ProfitAndLoss::HEADER.iter().enumerate() {
             let col_index = col_index as u32 + Self::START_COL;
             Self::write_value(
                 sheet,
@@ -68,50 +55,34 @@ impl ExcelWriter {
         }
     }
 
-    fn write_footer(sheet: &mut Worksheet, row_index: u32, total: i32) {
-        for col_index in 0..9 {
+    fn write_footer(
+        sheet: &mut Worksheet,
+        row_index: u32,
+        specific_account_total: i32,
+        nisa_account_total: i32,
+    ) -> Result<(), Box<dyn Error>> {
+        let profit_and_loss = ProfitAndLoss::with_total_realized_profit_and_loss(
+            specific_account_total,
+            nisa_account_total,
+        )?;
+
+        for (col_index, (value, format)) in profit_and_loss
+            .get_profit_and_loss_struct_list()
+            .iter()
+            .enumerate()
+        {
             let col_index = col_index as u32 + Self::START_COL;
+
             Self::write_value(
                 sheet,
                 (col_index, row_index),
-                "",
-                None,
+                value.as_deref().unwrap_or(""),
+                *format,
                 Some(Self::COLOR_GREEN),
             );
         }
 
-        // 実現損益[円]
-        Self::write_value(
-            sheet,
-            (11, row_index),
-            total,
-            Some(ProfitAndLoss::YEN_FORMAT),
-            Some(Self::COLOR_GREEN),
-        );
-
-        let tax: i32 = if total < 0 {
-            0
-        } else {
-            (total as f64 * Self::TAX_RATE) as i32
-        };
-
-        // 源泉徴収税額
-        Self::write_value(
-            sheet,
-            (12, row_index),
-            tax,
-            Some(ProfitAndLoss::YEN_FORMAT),
-            Some(Self::COLOR_GREEN),
-        );
-
-        // 損益
-        Self::write_value(
-            sheet,
-            (13, row_index),
-            total - tax,
-            Some(ProfitAndLoss::YEN_FORMAT),
-            Some(Self::COLOR_GREEN),
-        );
+        Ok(())
     }
 
     fn write_profit_and_loss(
@@ -122,24 +93,38 @@ impl ExcelWriter {
 
         let mut row_index = Self::START_ROW;
         for (_, profit_and_loss) in profit_and_loss_map {
-            let mut total = 0;
+            let mut specific_account_total = 0;
+            let mut nisa_account_total = 0;
             for record in profit_and_loss {
                 row_index += 1;
+
                 for (col_index, (value, format)) in
-                    record.get_profit_and_loss_list().iter().enumerate()
+                    record.get_profit_and_loss_struct_list().iter().enumerate()
                 {
                     let col_index = col_index as u32 + Self::START_COL;
-                    Self::write_value(sheet, (col_index, row_index), value, *format, None);
+                    Self::write_value(
+                        sheet,
+                        (col_index, row_index),
+                        value.as_deref().unwrap_or("-"),
+                        *format,
+                        None,
+                    );
                 }
 
-                let col_index = record.get_profit_and_loss_list().len() as u32;
-                Self::write_value(sheet, (col_index + 2, row_index), "-", None, None);
-                Self::write_value(sheet, (col_index + 3, row_index), "-", None, None);
-
-                total += record.realized_profit_and_loss;
+                if let (Some(account), Some(realized_profit_and_loss)) =
+                    (record.account, record.realized_profit_and_loss)
+                {
+                    if account.contains("特定") {
+                        specific_account_total += realized_profit_and_loss;
+                    } else {
+                        nisa_account_total += realized_profit_and_loss;
+                    }
+                }
             }
             row_index += 1;
-            Self::write_footer(sheet, row_index, total);
+
+            let _ =
+                Self::write_footer(sheet, row_index, specific_account_total, nisa_account_total);
         }
 
         Ok(())

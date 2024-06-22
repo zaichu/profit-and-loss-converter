@@ -14,11 +14,13 @@ impl CSVReader {
         let mut reader = csv::Reader::from_path(csv_filepath)?;
 
         for record in reader.records() {
-            let profit_and_loss = ProfitAndLoss::new(record?)?;
-            result
-                .entry(profit_and_loss.trade_date)
-                .or_insert_with(Vec::new)
-                .push(profit_and_loss);
+            let profit_and_loss = ProfitAndLoss::from_record(record?)?;
+            if let Some(trade_date) = profit_and_loss.trade_date {
+                result
+                    .entry(trade_date)
+                    .or_insert_with(Vec::new)
+                    .push(profit_and_loss);
+            }
         }
 
         Ok(result)
