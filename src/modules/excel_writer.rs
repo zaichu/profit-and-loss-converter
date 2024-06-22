@@ -146,11 +146,7 @@ impl ExcelWriter {
                 .set_format_code(format);
         }
 
-        if let Some(color) = color {
-            Self::apply_style(cell, color);
-        } else {
-            Self::apply_style(cell, Self::COLOR_WHITE);
-        }
+        Self::apply_style(cell, color.as_deref().unwrap_or(Self::COLOR_WHITE));
     }
 
     fn apply_style(cell: &mut Cell, color: &str) {
