@@ -4,59 +4,53 @@ use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct ProfitAndLoss {
-    pub trade_date: NaiveDate,      // 約定日
-    pub settlement_date: NaiveDate, // 受渡日
-    pub securities_code: String,    // 銘柄コード
-    pub company_name: String,       // 銘柄名
-    pub account: String,            // 口座
-    pub shares: i32,                // 数量[株]
-    pub asked_price: f64,           // 売却/決済単価[円]
-    pub settlement_amount: i32,     // 売却/決済額[円]
-    pub purchase_price: f64,        // 平均取得価額[円]
-    pub profit_and_loss: i32,       // 実現損益[円]
+    pub trade_date: NaiveDate,         // 約定日
+    pub settlement_date: NaiveDate,    // 受渡日
+    pub security_code: String,         // 銘柄コード
+    pub security_name: String,         // 銘柄名
+    pub account: String,               // 口座
+    pub shares: i32,                   // 数量[株]
+    pub asked_price: f64,              // 売却/決済単価[円]
+    pub proceeds: i32,                 // 売却/決済額[円]
+    pub purchase_price: f64,           // 平均取得価額[円]
+    pub realized_profit_and_loss: i32, // 実現損益[円]
 }
 
 impl ProfitAndLoss {
-    const YEN_FORMAT: &'static str = "\"¥\"#,##0.00;\"¥\"-#,##0.00";
+    pub const YEN_FORMAT: &'static str = "\"¥\"#,##0.00;\"¥\"-#,##0.00";
 
     pub fn new(record: StringRecord) -> Result<Self, Box<dyn Error>> {
         Ok(ProfitAndLoss {
-            trade_date: Self::parse_date("trade_date", record.get(0))?,
-            settlement_date: Self::parse_date("settlement_date", record.get(1))?,
-            securities_code: Self::parse_string("securities_code", record.get(2))?,
-            company_name: Self::parse_string("company_name", record.get(3))?,
-            account: Self::parse_string("account", record.get(4))?,
-            shares: Self::parse_int("shares", record.get(7))?,
-            asked_price: Self::parse_float("asked_price", record.get(8))?,
-            settlement_amount: Self::parse_int("settlement_amount", record.get(9))?,
-            purchase_price: Self::parse_float("purchase_price", record.get(10))?,
-            profit_and_loss: Self::parse_int("profit_and_loss", record.get(11))?,
+            trade_date: Self::parse_date(stringify!(trade_date), record.get(0))?,
+            settlement_date: Self::parse_date(stringify!(settlement_date), record.get(1))?,
+            security_code: Self::parse_string(stringify!(security_code), record.get(2))?,
+            security_name: Self::parse_string(stringify!(security_name), record.get(3))?,
+            account: Self::parse_string(stringify!(account), record.get(4))?,
+            shares: Self::parse_int(stringify!(shares), record.get(7))?,
+            asked_price: Self::parse_float(stringify!(asked_price), record.get(8))?,
+            proceeds: Self::parse_int(stringify!(proceeds), record.get(9))?,
+            purchase_price: Self::parse_float(stringify!(purchase_price), record.get(10))?,
+            realized_profit_and_loss: Self::parse_int(
+                stringify!(realized_profit_and_loss),
+                record.get(11),
+            )?,
         })
     }
 
-    pub fn get_profit_and_loss_list(&self) -> [(String, Option<String>); 10] {
+    pub fn get_profit_and_loss_list(&self) -> [(String, Option<&str>); 10] {
         [
             (self.trade_date.to_string(), None),
             (self.settlement_date.to_string(), None),
-            (self.securities_code.clone(), None),
-            (self.company_name.clone(), None),
+            (self.security_code.clone(), None),
+            (self.security_name.clone(), None),
             (self.account.clone(), None),
             (self.shares.to_string(), None),
+            (self.asked_price.to_string(), Some(Self::YEN_FORMAT)),
+            (self.proceeds.to_string(), Some(Self::YEN_FORMAT)),
+            (self.purchase_price.to_string(), Some(Self::YEN_FORMAT)),
             (
-                self.asked_price.to_string(),
-                Some(Self::YEN_FORMAT.to_string()),
-            ),
-            (
-                self.settlement_amount.to_string(),
-                Some(Self::YEN_FORMAT.to_string()),
-            ),
-            (
-                self.purchase_price.to_string(),
-                Some(Self::YEN_FORMAT.to_string()),
-            ),
-            (
-                self.profit_and_loss.to_string(),
-                Some(Self::YEN_FORMAT.to_string()),
+                self.realized_profit_and_loss.to_string(),
+                Some(Self::YEN_FORMAT),
             ),
         ]
     }
