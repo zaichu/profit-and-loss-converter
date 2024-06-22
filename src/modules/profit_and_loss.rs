@@ -4,19 +4,19 @@ use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct ProfitAndLoss {
-    pub trade_date: Option<NaiveDate>,               // 約定日
-    pub settlement_date: Option<NaiveDate>,          // 受渡日
-    pub security_code: Option<String>,               // 銘柄コード
-    pub security_name: Option<String>,               // 銘柄名
-    pub account: Option<String>,                     // 口座
-    pub shares: Option<i32>,                         // 数量[株]
-    pub asked_price: Option<f64>,                    // 売却/決済単価[円]
-    pub proceeds: Option<i32>,                       // 売却/決済額[円]
-    pub purchase_price: Option<f64>,                 // 平均取得価額[円]
-    pub realized_profit_and_loss: Option<i32>,       // 実現損益[円]
-    pub total_realized_profit_and_loss: Option<i32>, // 合計実現損益[円]
-    pub withholding_tax: Option<u32>,                // 源泉徴収税額
-    pub profit_and_loss: Option<i32>,                // 損益
+    pub trade_date: Option<NaiveDate>,
+    pub settlement_date: Option<NaiveDate>,
+    pub security_code: Option<String>,
+    pub security_name: Option<String>,
+    pub account: Option<String>,
+    pub shares: Option<i32>,
+    pub asked_price: Option<f64>,
+    pub proceeds: Option<i32>,
+    pub purchase_price: Option<f64>,
+    pub realized_profit_and_loss: Option<i32>,
+    pub total_realized_profit_and_loss: Option<i32>,
+    pub withholding_tax: Option<u32>,
+    pub profit_and_loss: Option<i32>,
 }
 
 impl ProfitAndLoss {
@@ -66,8 +66,8 @@ impl ProfitAndLoss {
         } else {
             (specific_account_total as f64 * Self::TAX_RATE) as u32
         };
-
         let total = specific_account_total + nisa_account_total;
+
         Ok(ProfitAndLoss {
             trade_date: None,
             settlement_date: None,
@@ -127,47 +127,32 @@ impl ProfitAndLoss {
     }
 
     fn parse_date(date_str: Option<&str>) -> Result<Option<NaiveDate>, Box<dyn Error>> {
-        match date_str {
-            Some(date_str) => {
-                let date =
-                    NaiveDate::parse_from_str(date_str.replace("/", "-").as_str(), "%Y-%m-%d")
-                        .map_err(|e| format!("Failed to parse date '{date_str}': {e}"))?;
-                Ok(Some(date))
-            }
-            None => Ok(None),
-        }
+        date_str.map_or(Ok(None), |s| {
+            NaiveDate::parse_from_str(&s.replace("/", "-"), "%Y-%m-%d")
+                .map(Some)
+                .map_err(|e| format!("Failed to parse date '{s}': {e}").into())
+        })
     }
 
     fn parse_int(num_str: Option<&str>) -> Result<Option<i32>, Box<dyn Error>> {
-        match num_str {
-            Some(num_str) => {
-                let num = num_str
-                    .replace(",", "")
-                    .parse::<i32>()
-                    .map_err(|e| format!("Failed to parse integer '{num_str}': {e}"))?;
-                Ok(Some(num))
-            }
-            None => Ok(None),
-        }
+        num_str.map_or(Ok(None), |s| {
+            s.replace(",", "")
+                .parse::<i32>()
+                .map(Some)
+                .map_err(|e| format!("Failed to parse integer '{s}': {e}").into())
+        })
     }
 
     fn parse_float(num_str: Option<&str>) -> Result<Option<f64>, Box<dyn Error>> {
-        match num_str {
-            Some(num_str) => {
-                let num = num_str
-                    .replace(",", "")
-                    .parse::<f64>()
-                    .map_err(|e| format!("Failed to parse float '{num_str}': {e}"))?;
-                Ok(Some(num))
-            }
-            None => Ok(None),
-        }
+        num_str.map_or(Ok(None), |s| {
+            s.replace(",", "")
+                .parse::<f64>()
+                .map(Some)
+                .map_err(|e| format!("Failed to parse float '{s}': {e}").into())
+        })
     }
 
     fn parse_string(value: Option<&str>) -> Result<Option<String>, Box<dyn Error>> {
-        match value {
-            Some(value) => Ok(Some(value.to_string())),
-            None => Ok(None),
-        }
+        Ok(value.map(|s| s.to_string()))
     }
 }

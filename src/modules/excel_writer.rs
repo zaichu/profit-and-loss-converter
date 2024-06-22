@@ -1,6 +1,5 @@
 use super::profit_and_loss::ProfitAndLoss;
 use chrono::NaiveDate;
-
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::path::Path;
@@ -10,7 +9,6 @@ pub struct ExcelWriter;
 
 impl ExcelWriter {
     const SHEET_NAME: &'static str = "株取引";
-
     const COLOR_ORANGE: &'static str = "FFF8CBAD";
     const COLOR_GREEN: &'static str = "FFC5E0B4";
     const COLOR_WHITE: &'static str = "FF000000";
@@ -27,17 +25,27 @@ impl ExcelWriter {
         }
 
         let mut new_sheet = book.new_sheet(Self::SHEET_NAME)?;
-
         Self::write_profit_and_loss(&mut new_sheet, profit_and_loss_map)?;
-
-        for index in 2..=ProfitAndLoss::HEADER.len() {
-            let col = index as u32;
-            new_sheet
-                .get_column_dimension_by_number_mut(&col)
-                .set_width(15.0);
-        }
+        Self::adjust_column_widths(&mut new_sheet)?;
 
         writer::xlsx::write(&book, xlsx_filepath)?;
+        Ok(())
+    }
+
+    fn write_profit_and_loss(
+        sheet: &mut Worksheet,
+        profit_and_loss_map: BTreeMap<NaiveDate, Vec<ProfitAndLoss>>,
+    ) -> Result<(), Box<dyn Error>> {
+        Self::write_header(sheet);
+
+        let mut row_index = Self::START_ROW;
+        for (_, profit_and_loss) in profit_and_loss_map {
+            let (specific_account_total, nisa_account_total) =
+                Self::write_records(sheet, &mut row_index, profit_and_loss)?;
+            row_index += 1;
+
+            Self::write_footer(sheet, row_index, specific_account_total, nisa_account_total)?;
+        }
 
         Ok(())
     }
@@ -55,6 +63,43 @@ impl ExcelWriter {
         }
     }
 
+    fn write_records(
+        sheet: &mut Worksheet,
+        row_index: &mut u32,
+        records: Vec<ProfitAndLoss>,
+    ) -> Result<(i32, i32), Box<dyn Error>> {
+        let mut specific_account_total = 0;
+        let mut nisa_account_total = 0;
+
+        for record in records {
+            *row_index += 1;
+            for (col_index, (value, format)) in
+                record.get_profit_and_loss_struct_list().iter().enumerate()
+            {
+                let col_index = col_index as u32 + Self::START_COL;
+                Self::write_value(
+                    sheet,
+                    (col_index, *row_index),
+                    value.as_deref().unwrap_or("-"),
+                    *format,
+                    None,
+                );
+            }
+
+            if let (Some(account), Some(realized_profit_and_loss)) =
+                (record.account, record.realized_profit_and_loss)
+            {
+                if account.contains("特定") {
+                    specific_account_total += realized_profit_and_loss;
+                } else {
+                    nisa_account_total += realized_profit_and_loss;
+                }
+            }
+        }
+
+        Ok((specific_account_total, nisa_account_total))
+    }
+
     fn write_footer(
         sheet: &mut Worksheet,
         row_index: u32,
@@ -65,14 +110,12 @@ impl ExcelWriter {
             specific_account_total,
             nisa_account_total,
         )?;
-
         for (col_index, (value, format)) in profit_and_loss
             .get_profit_and_loss_struct_list()
             .iter()
             .enumerate()
         {
             let col_index = col_index as u32 + Self::START_COL;
-
             Self::write_value(
                 sheet,
                 (col_index, row_index),
@@ -80,51 +123,6 @@ impl ExcelWriter {
                 *format,
                 Some(Self::COLOR_GREEN),
             );
-        }
-
-        Ok(())
-    }
-
-    fn write_profit_and_loss(
-        sheet: &mut Worksheet,
-        profit_and_loss_map: BTreeMap<NaiveDate, Vec<ProfitAndLoss>>,
-    ) -> Result<(), Box<dyn Error>> {
-        Self::write_header(sheet);
-
-        let mut row_index = Self::START_ROW;
-        for (_, profit_and_loss) in profit_and_loss_map {
-            let mut specific_account_total = 0;
-            let mut nisa_account_total = 0;
-            for record in profit_and_loss {
-                row_index += 1;
-
-                for (col_index, (value, format)) in
-                    record.get_profit_and_loss_struct_list().iter().enumerate()
-                {
-                    let col_index = col_index as u32 + Self::START_COL;
-                    Self::write_value(
-                        sheet,
-                        (col_index, row_index),
-                        value.as_deref().unwrap_or("-"),
-                        *format,
-                        None,
-                    );
-                }
-
-                if let (Some(account), Some(realized_profit_and_loss)) =
-                    (record.account, record.realized_profit_and_loss)
-                {
-                    if account.contains("特定") {
-                        specific_account_total += realized_profit_and_loss;
-                    } else {
-                        nisa_account_total += realized_profit_and_loss;
-                    }
-                }
-            }
-            row_index += 1;
-
-            let _ =
-                Self::write_footer(sheet, row_index, specific_account_total, nisa_account_total);
         }
 
         Ok(())
@@ -146,13 +144,12 @@ impl ExcelWriter {
                 .set_format_code(format);
         }
 
-        Self::apply_style(cell, color.as_deref().unwrap_or(Self::COLOR_WHITE));
+        Self::apply_style(cell, color.unwrap_or(Self::COLOR_WHITE));
     }
 
     fn apply_style(cell: &mut Cell, color: &str) {
         let style = cell.get_style_mut();
         style.set_background_color(color);
-
         let borders = style.get_borders_mut();
         borders
             .get_bottom_border_mut()
@@ -166,5 +163,14 @@ impl ExcelWriter {
         borders
             .get_top_border_mut()
             .set_border_style(Border::BORDER_THIN);
+    }
+
+    fn adjust_column_widths(sheet: &mut Worksheet) -> Result<(), Box<dyn Error>> {
+        for index in 2..=ProfitAndLoss::HEADER.len() as u32 {
+            sheet
+                .get_column_dimension_by_number_mut(&index)
+                .set_width(15.0);
+        }
+        Ok(())
     }
 }
