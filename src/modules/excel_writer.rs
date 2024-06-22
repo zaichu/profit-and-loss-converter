@@ -1,17 +1,13 @@
-use super::profit_and_loss::ProfitAndLoss;
+use super::{profit_and_loss::ProfitAndLoss, settings::SETTINGS};
 use chrono::NaiveDate;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::path::Path;
-use umya_spreadsheet::{self, reader, writer, Border, Cell, Worksheet};
+use umya_spreadsheet::{self, reader, writer, Border, Worksheet};
 
 pub struct ExcelWriter;
 
 impl ExcelWriter {
-    const SHEET_NAME: &'static str = "株取引";
-    const COLOR_ORANGE: &'static str = "FFF8CBAD";
-    const COLOR_GREEN: &'static str = "FFC5E0B4";
-    const COLOR_WHITE: &'static str = "FF000000";
     const START_ROW: u32 = 2;
     const START_COL: u32 = 2;
 
@@ -19,12 +15,12 @@ impl ExcelWriter {
         profit_and_loss_map: BTreeMap<NaiveDate, Vec<ProfitAndLoss>>,
         xlsx_filepath: &Path,
     ) -> Result<(), Box<dyn Error>> {
-        let mut book = reader::xlsx::read(xlsx_filepath)?;
-        if book.get_sheet_by_name(Self::SHEET_NAME).is_some() {
-            book.remove_sheet_by_name(Self::SHEET_NAME)?;
+        let mut book = reader::xlsx::read(xlsx_filepath).expect("Failed to read xlsx");
+        if book.get_sheet_by_name(&SETTINGS.sheet_name).is_some() {
+            book.remove_sheet_by_name(&SETTINGS.sheet_name)?;
         }
 
-        let mut new_sheet = book.new_sheet(Self::SHEET_NAME)?;
+        let mut new_sheet = book.new_sheet(&SETTINGS.sheet_name)?;
         Self::write_profit_and_loss(&mut new_sheet, profit_and_loss_map)?;
         Self::adjust_column_widths(&mut new_sheet)?;
 
@@ -56,9 +52,8 @@ impl ExcelWriter {
             Self::write_cell(
                 sheet,
                 (col_index, Self::START_ROW),
-                header,
-                None,
-                Some(Self::COLOR_ORANGE),
+                &(Some(header), None, None),
+                Some(SETTINGS.colors.get("header_background").unwrap()),
             );
         }
     }
@@ -73,17 +68,9 @@ impl ExcelWriter {
 
         for record in records {
             *row_index += 1;
-            for (col_index, (value, format)) in
-                record.get_profit_and_loss_struct_list().iter().enumerate()
-            {
+            for (col_index, item) in record.get_profit_and_loss_struct_list().iter().enumerate() {
                 let col_index = col_index as u32 + Self::START_COL;
-                Self::write_cell(
-                    sheet,
-                    (col_index, *row_index),
-                    value.as_deref().unwrap_or("-"),
-                    *format,
-                    None,
-                );
+                Self::write_cell(sheet, (col_index, *row_index), item, None);
             }
 
             if let (Some(account), Some(realized_profit_and_loss)) =
@@ -110,7 +97,7 @@ impl ExcelWriter {
             specific_account_total,
             nisa_account_total,
         )?;
-        for (col_index, (value, format)) in profit_and_loss
+        for (col_index, item) in profit_and_loss
             .get_profit_and_loss_struct_list()
             .iter()
             .enumerate()
@@ -119,9 +106,8 @@ impl ExcelWriter {
             Self::write_cell(
                 sheet,
                 (col_index, row_index),
-                value.as_deref().unwrap_or(""),
-                *format,
-                Some(Self::COLOR_GREEN),
+                item,
+                Some(SETTINGS.colors.get("footer_background").unwrap()),
             );
         }
 
@@ -131,25 +117,30 @@ impl ExcelWriter {
     fn write_cell<T: ToString>(
         sheet: &mut Worksheet,
         coordinate: (u32, u32),
-        value: T,
-        format: Option<&str>,
+        (value, format, font_color): &(Option<T>, Option<&str>, Option<&str>),
         background_color: Option<&str>,
     ) {
         let cell = sheet.get_cell_mut(coordinate);
-        cell.set_value(value.to_string());
+        // valueがNoneの場合は空文字列を設定
+        if let Some(value) = value {
+            cell.set_value(value.to_string());
+        }
 
         if let Some(format) = format {
             cell.get_style_mut()
                 .get_number_format_mut()
-                .set_format_code(format);
+                .set_format_code(*format);
         }
 
-        Self::apply_style(cell, background_color.unwrap_or(Self::COLOR_WHITE));
-    }
-
-    fn apply_style(cell: &mut Cell, color: &str) {
         let style = cell.get_style_mut();
-        style.set_background_color(color);
+        if let Some(background_color) = background_color {
+            style.set_background_color(background_color);
+        }
+
+        if let Some(font_color) = font_color {
+            style.get_font_mut().get_color_mut().set_argb(*font_color);
+        }
+
         let borders = style.get_borders_mut();
         borders
             .get_bottom_border_mut()

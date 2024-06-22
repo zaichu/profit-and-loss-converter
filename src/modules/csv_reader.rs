@@ -11,7 +11,7 @@ impl CSVReader {
         csv_filepath: &Path,
     ) -> Result<BTreeMap<NaiveDate, Vec<ProfitAndLoss>>, Box<dyn Error>> {
         let mut result = BTreeMap::new();
-        let mut reader = csv::Reader::from_path(csv_filepath)?;
+        let mut reader = csv::Reader::from_path(csv_filepath).expect("Failed to read csv");
 
         for record in reader.records() {
             let profit_and_loss = ProfitAndLoss::from_record(record?)?;

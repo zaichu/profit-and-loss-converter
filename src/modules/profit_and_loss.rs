@@ -4,25 +4,27 @@ use std::error::Error;
 
 #[derive(Debug, Clone)]
 pub struct ProfitAndLoss {
-    pub trade_date: Option<NaiveDate>,
-    pub settlement_date: Option<NaiveDate>,
-    pub security_code: Option<String>,
-    pub security_name: Option<String>,
-    pub account: Option<String>,
-    pub shares: Option<i32>,
-    pub asked_price: Option<f64>,
-    pub proceeds: Option<i32>,
-    pub purchase_price: Option<f64>,
-    pub realized_profit_and_loss: Option<i32>,
-    pub total_realized_profit_and_loss: Option<i32>,
-    pub withholding_tax: Option<u32>,
-    pub profit_and_loss: Option<i32>,
+    pub trade_date: Option<NaiveDate>,               // 約定日
+    pub settlement_date: Option<NaiveDate>,          // 受渡日
+    pub security_code: Option<String>,               // 銘柄コード
+    pub security_name: Option<String>,               // 銘柄名
+    pub account: Option<String>,                     // 口座
+    pub shares: Option<i32>,                         // 数量[株]
+    pub asked_price: Option<f64>,                    // 売却/決済単価[円]
+    pub proceeds: Option<i32>,                       // 売却/決済額[円]
+    pub purchase_price: Option<f64>,                 // 平均取得価額[円]
+    pub realized_profit_and_loss: Option<i32>,       // 実現損益[円]
+    pub total_realized_profit_and_loss: Option<i32>, // 合計実現損益[円]
+    pub withholding_tax: Option<u32>,                // 源泉徴収税額
+    pub profit_and_loss: Option<i32>,                // 損益
 }
 
 impl ProfitAndLoss {
     const YEN_DECIMAL_FORMAT: &'static str = "\"¥\"#,##0.00;\"¥\"-#,##0.00";
     const YEN_FORMAT: &'static str = "\"¥\"#,##0;\"¥\"-#,##0";
     const TAX_RATE: f64 = 0.20315;
+    const COLOR_RED: &'static str = "FFFFFFFF";
+
     pub const HEADER: &'static [&'static str] = &[
         "約定日",
         "受渡日",
@@ -87,41 +89,61 @@ impl ProfitAndLoss {
 
     pub fn get_profit_and_loss_struct_list(
         &self,
-    ) -> [(Option<String>, Option<&'static str>); Self::HEADER.len()] {
+    ) -> [(Option<String>, Option<&'static str>, Option<&'static str>); Self::HEADER.len()] {
         [
-            (self.trade_date.map(|d| d.to_string()), None),
-            (self.settlement_date.map(|d| d.to_string()), None),
-            (self.security_code.clone(), None),
-            (self.security_name.clone(), None),
-            (self.account.clone(), None),
-            (self.shares.map(|s| s.to_string()), None),
+            // value, format, font_color
+            (self.trade_date.map(|d| d.to_string()), None, None),
+            (self.settlement_date.map(|d| d.to_string()), None, None),
+            (self.security_code.clone(), None, None),
+            (self.security_name.clone(), None, None),
+            (self.account.clone(), None, None),
+            (self.shares.map(|s| s.to_string()), None, None),
             (
                 self.asked_price.map(|p| p.to_string()),
                 Some(Self::YEN_DECIMAL_FORMAT),
+                None,
             ),
             (
                 self.proceeds.map(|p| p.to_string()),
                 Some(Self::YEN_DECIMAL_FORMAT),
+                None,
             ),
             (
                 self.purchase_price.map(|p| p.to_string()),
                 Some(Self::YEN_DECIMAL_FORMAT),
+                None,
             ),
             (
                 self.realized_profit_and_loss.map(|p| p.to_string()),
                 Some(Self::YEN_DECIMAL_FORMAT),
+                if self.realized_profit_and_loss < Some(0) {
+                    Some(Self::COLOR_RED)
+                } else {
+                    None
+                },
             ),
             (
                 self.total_realized_profit_and_loss.map(|p| p.to_string()),
                 Some(Self::YEN_FORMAT),
+                if self.total_realized_profit_and_loss < Some(0) {
+                    Some(Self::COLOR_RED)
+                } else {
+                    None
+                },
             ),
             (
                 self.withholding_tax.map(|p| p.to_string()),
                 Some(Self::YEN_FORMAT),
+                None,
             ),
             (
                 self.profit_and_loss.map(|p| p.to_string()),
                 Some(Self::YEN_FORMAT),
+                if self.profit_and_loss < Some(0) {
+                    Some(Self::COLOR_RED)
+                } else {
+                    None
+                },
             ),
         ]
     }
