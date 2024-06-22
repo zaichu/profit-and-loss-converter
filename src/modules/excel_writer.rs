@@ -53,7 +53,7 @@ impl ExcelWriter {
     fn write_header(sheet: &mut Worksheet) {
         for (col_index, header) in ProfitAndLoss::HEADER.iter().enumerate() {
             let col_index = col_index as u32 + Self::START_COL;
-            Self::write_value(
+            Self::write_cell(
                 sheet,
                 (col_index, Self::START_ROW),
                 header,
@@ -77,7 +77,7 @@ impl ExcelWriter {
                 record.get_profit_and_loss_struct_list().iter().enumerate()
             {
                 let col_index = col_index as u32 + Self::START_COL;
-                Self::write_value(
+                Self::write_cell(
                     sheet,
                     (col_index, *row_index),
                     value.as_deref().unwrap_or("-"),
@@ -116,7 +116,7 @@ impl ExcelWriter {
             .enumerate()
         {
             let col_index = col_index as u32 + Self::START_COL;
-            Self::write_value(
+            Self::write_cell(
                 sheet,
                 (col_index, row_index),
                 value.as_deref().unwrap_or(""),
@@ -128,7 +128,7 @@ impl ExcelWriter {
         Ok(())
     }
 
-    fn write_value<T: ToString>(
+    fn write_cell<T: ToString>(
         sheet: &mut Worksheet,
         coordinate: (u32, u32),
         value: T,
