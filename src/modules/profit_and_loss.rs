@@ -1,3 +1,4 @@
+use super::settings::SETTINGS;
 use chrono::NaiveDate;
 use csv::StringRecord;
 use std::error::Error;
@@ -20,26 +21,23 @@ pub struct ProfitAndLoss {
 }
 
 impl ProfitAndLoss {
-    const YEN_DECIMAL_FORMAT: &'static str = "\"¥\"#,##0.00;\"¥\"-#,##0.00";
-    const YEN_FORMAT: &'static str = "\"¥\"#,##0;\"¥\"-#,##0";
-    const TAX_RATE: f64 = 0.20315;
-    const COLOR_RED: &'static str = "FFFFFFFF";
-
-    pub const HEADER: &'static [&'static str] = &[
-        "約定日",
-        "受渡日",
-        "銘柄コード",
-        "銘柄名",
-        "口座",
-        "数量[株]",
-        "売却/決済単価[円]",
-        "売却/決済額[円]",
-        "平均取得価額[円]",
-        "実現損益[円]",
-        "合計実現損益[円]",
-        "源泉徴収税額",
-        "損益",
-    ];
+    pub fn new() -> Result<Self, &'static str> {
+        Ok(ProfitAndLoss {
+            trade_date: None,
+            settlement_date: None,
+            security_code: None,
+            security_name: None,
+            account: None,
+            shares: None,
+            asked_price: None,
+            proceeds: None,
+            purchase_price: None,
+            realized_profit_and_loss: None,
+            total_realized_profit_and_loss: None,
+            withholding_tax: None,
+            profit_and_loss: None,
+        })
+    }
 
     pub fn from_record(record: StringRecord) -> Result<Self, Box<dyn Error>> {
         Ok(ProfitAndLoss {
@@ -66,7 +64,7 @@ impl ProfitAndLoss {
         let withholding_tax = if specific_account_total < 0 {
             0
         } else {
-            (specific_account_total as f64 * Self::TAX_RATE) as u32
+            (specific_account_total as f64 * SETTINGS.tax_rate) as u32
         };
         let total = specific_account_total + nisa_account_total;
 
@@ -87,63 +85,44 @@ impl ProfitAndLoss {
         })
     }
 
-    pub fn get_profit_and_loss_struct_list(
-        &self,
-    ) -> [(Option<String>, Option<&'static str>, Option<&'static str>); Self::HEADER.len()] {
-        [
-            // value, format, font_color
-            (self.trade_date.map(|d| d.to_string()), None, None),
-            (self.settlement_date.map(|d| d.to_string()), None, None),
-            (self.security_code.clone(), None, None),
-            (self.security_name.clone(), None, None),
-            (self.account.clone(), None, None),
-            (self.shares.map(|s| s.to_string()), None, None),
+    pub fn get_profit_and_loss_struct_list(&self) -> Vec<(&str, Option<String>)> {
+        vec![
             (
+                stringify!(trade_date),
+                self.trade_date.map(|d| d.to_string()),
+            ),
+            (
+                stringify!(settlement_date),
+                self.settlement_date.map(|d| d.to_string()),
+            ),
+            (stringify!(security_code), self.security_code.clone()),
+            (stringify!(security_name), self.security_name.clone()),
+            (stringify!(account), self.account.clone()),
+            (stringify!(shares), self.shares.map(|s| s.to_string())),
+            (
+                stringify!(asked_price),
                 self.asked_price.map(|p| p.to_string()),
-                Some(Self::YEN_DECIMAL_FORMAT),
-                None,
             ),
+            (stringify!(proceeds), self.proceeds.map(|p| p.to_string())),
             (
-                self.proceeds.map(|p| p.to_string()),
-                Some(Self::YEN_DECIMAL_FORMAT),
-                None,
-            ),
-            (
+                stringify!(purchase_price),
                 self.purchase_price.map(|p| p.to_string()),
-                Some(Self::YEN_DECIMAL_FORMAT),
-                None,
             ),
             (
+                stringify!(realized_profit_and_loss),
                 self.realized_profit_and_loss.map(|p| p.to_string()),
-                Some(Self::YEN_DECIMAL_FORMAT),
-                if self.realized_profit_and_loss < Some(0) {
-                    Some(Self::COLOR_RED)
-                } else {
-                    None
-                },
             ),
             (
+                stringify!(total_realized_profit_and_loss),
                 self.total_realized_profit_and_loss.map(|p| p.to_string()),
-                Some(Self::YEN_FORMAT),
-                if self.total_realized_profit_and_loss < Some(0) {
-                    Some(Self::COLOR_RED)
-                } else {
-                    None
-                },
             ),
             (
+                stringify!(withholding_tax),
                 self.withholding_tax.map(|p| p.to_string()),
-                Some(Self::YEN_FORMAT),
-                None,
             ),
             (
+                stringify!(profit_and_loss),
                 self.profit_and_loss.map(|p| p.to_string()),
-                Some(Self::YEN_FORMAT),
-                if self.profit_and_loss < Some(0) {
-                    Some(Self::COLOR_RED)
-                } else {
-                    None
-                },
             ),
         ]
     }

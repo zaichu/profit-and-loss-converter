@@ -8,9 +8,6 @@ use umya_spreadsheet::{self, reader, writer, Border, Worksheet};
 pub struct ExcelWriter;
 
 impl ExcelWriter {
-    const START_ROW: u32 = 2;
-    const START_COL: u32 = 2;
-
     pub fn update_sheet(
         profit_and_loss_map: BTreeMap<NaiveDate, Vec<ProfitAndLoss>>,
         xlsx_filepath: &Path,
@@ -32,9 +29,9 @@ impl ExcelWriter {
         sheet: &mut Worksheet,
         profit_and_loss_map: BTreeMap<NaiveDate, Vec<ProfitAndLoss>>,
     ) -> Result<(), Box<dyn Error>> {
-        Self::write_header(sheet);
+        Self::write_header(sheet, ProfitAndLoss::new().unwrap());
 
-        let mut row_index = Self::START_ROW;
+        let mut row_index = SETTINGS.start_row;
         for (_, profit_and_loss) in profit_and_loss_map {
             let (specific_account_total, nisa_account_total) =
                 Self::write_records(sheet, &mut row_index, profit_and_loss)?;
@@ -46,14 +43,15 @@ impl ExcelWriter {
         Ok(())
     }
 
-    fn write_header(sheet: &mut Worksheet) {
-        for (col_index, header) in ProfitAndLoss::HEADER.iter().enumerate() {
-            let col_index = col_index as u32 + Self::START_COL;
+    fn write_header(sheet: &mut Worksheet, header: ProfitAndLoss) {
+        for (col_index, (key, _)) in header.get_profit_and_loss_struct_list().iter().enumerate() {
+            let col_index = col_index as u32 + SETTINGS.start_col;
+            let value = SETTINGS.headers.get(*key).cloned();
+            let header_background_color = SETTINGS.colors.get("header_background");
             Self::write_cell(
                 sheet,
-                (col_index, Self::START_ROW),
-                &(Some(header), None, None),
-                Some(SETTINGS.colors.get("header_background").unwrap()),
+                (col_index, SETTINGS.start_row),
+                (value, None, header_background_color, None),
             );
         }
     }
@@ -68,9 +66,15 @@ impl ExcelWriter {
 
         for record in records {
             *row_index += 1;
-            for (col_index, item) in record.get_profit_and_loss_struct_list().iter().enumerate() {
-                let col_index = col_index as u32 + Self::START_COL;
-                Self::write_cell(sheet, (col_index, *row_index), item, None);
+            for (col_index, (key, value)) in
+                record.get_profit_and_loss_struct_list().iter().enumerate()
+            {
+                let col_index = col_index as u32 + SETTINGS.start_col;
+                Self::write_cell(
+                    sheet,
+                    (col_index, *row_index),
+                    Self::get_record_style((key, value.clone())),
+                );
             }
 
             if let (Some(account), Some(realized_profit_and_loss)) =
@@ -97,31 +101,33 @@ impl ExcelWriter {
             specific_account_total,
             nisa_account_total,
         )?;
-        for (col_index, item) in profit_and_loss
+        for (col_index, (key, value)) in profit_and_loss
             .get_profit_and_loss_struct_list()
             .iter()
             .enumerate()
         {
-            let col_index = col_index as u32 + Self::START_COL;
+            let col_index = col_index as u32 + SETTINGS.start_col;
             Self::write_cell(
                 sheet,
                 (col_index, row_index),
-                item,
-                Some(SETTINGS.colors.get("footer_background").unwrap()),
+                Self::get_footter_style((key, value.clone())),
             );
         }
 
         Ok(())
     }
 
-    fn write_cell<T: ToString>(
+    fn write_cell(
         sheet: &mut Worksheet,
         coordinate: (u32, u32),
-        (value, format, font_color): &(Option<T>, Option<&str>, Option<&str>),
-        background_color: Option<&str>,
+        (value, format, background_color, font_color): (
+            Option<String>,
+            Option<&String>,
+            Option<&String>,
+            Option<&String>,
+        ),
     ) {
         let cell = sheet.get_cell_mut(coordinate);
-        // valueがNoneの場合は空文字列を設定
         if let Some(value) = value {
             cell.set_value(value.to_string());
         }
@@ -129,7 +135,7 @@ impl ExcelWriter {
         if let Some(format) = format {
             cell.get_style_mut()
                 .get_number_format_mut()
-                .set_format_code(*format);
+                .set_format_code(format);
         }
 
         let style = cell.get_style_mut();
@@ -138,7 +144,7 @@ impl ExcelWriter {
         }
 
         if let Some(font_color) = font_color {
-            style.get_font_mut().get_color_mut().set_argb(*font_color);
+            style.get_font_mut().get_color_mut().set_argb(font_color);
         }
 
         let borders = style.get_borders_mut();
@@ -157,11 +163,74 @@ impl ExcelWriter {
     }
 
     fn adjust_column_widths(sheet: &mut Worksheet) -> Result<(), Box<dyn Error>> {
-        for index in 2..=ProfitAndLoss::HEADER.len() as u32 {
+        for index in SETTINGS.start_col..=SETTINGS.start_col + SETTINGS.headers.len() as u32 {
             sheet
                 .get_column_dimension_by_number_mut(&index)
                 .set_width(15.0);
         }
         Ok(())
+    }
+
+    fn get_record_style(
+        (key, value): (&str, Option<String>),
+    ) -> (
+        Option<String>,
+        Option<&String>,
+        Option<&String>,
+        Option<&String>,
+    ) {
+        // (value, format, background_color, font_color)
+        let yen_decimal_format = SETTINGS.formats.get("yen_decimal");
+        let yen_format = SETTINGS.formats.get("yen");
+        let realized_loss_font_color = SETTINGS.colors.get("realized_loss_font");
+
+        match (key, value.clone()) {
+            // "売却/決済単価[円]",　"平均取得価額[円]"
+            (stringify!(asked_price), Some(_)) | (stringify!(purchase_price), Some(_)) => {
+                (value, yen_decimal_format, None, None)
+            }
+            // "売却/決済額[円]", "実現損益[円]"
+            (stringify!(proceeds), Some(_value))
+            | (stringify!(realized_profit_and_loss), Some(_value)) => {
+                if value.clone().unwrap().starts_with('-') {
+                    (value, yen_format, None, realized_loss_font_color)
+                } else {
+                    (value, yen_format, None, None)
+                }
+            }
+            _ => (value, None, None, None),
+        }
+    }
+
+    fn get_footter_style(
+        (key, value): (&str, Option<String>),
+    ) -> (
+        Option<String>,
+        Option<&String>,
+        Option<&String>,
+        Option<&String>,
+    ) {
+        // (value, format, background_color, font_color)
+        let yen_format = SETTINGS.formats.get("yen");
+        let background_color = SETTINGS.colors.get("footer_background").clone();
+        let realized_loss_font_color = SETTINGS.colors.get("realized_loss_font");
+
+        match (key, value.clone()) {
+            (stringify!(trade_date), Some(_value))
+            | (stringify!(withholding_tax), Some(_value))
+            | (stringify!(profit_and_loss), Some(_value)) => {
+                if _value.starts_with('-') {
+                    (
+                        value,
+                        yen_format,
+                        background_color,
+                        realized_loss_font_color,
+                    )
+                } else {
+                    (value, yen_format, background_color, None)
+                }
+            }
+            _ => (value, None, background_color, None),
+        }
     }
 }
