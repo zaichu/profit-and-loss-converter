@@ -4,6 +4,10 @@ use std::path::Path;
 use std::path::PathBuf;
 
 fn main() {
+    // ビルド時に x86_64-w64-mingw32-gcc を使用する
+    println!("cargo:rustc-env=CC=x86_64-w64-mingw32-gcc");
+    println!("cargo:rustc-env=TARGET=x86_64-pc-windows-gnu");
+
     // プロジェクトのルートディレクトリのパスを取得
     let project_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     println!("Project directory: {project_dir}");
