@@ -18,15 +18,9 @@ enum FactoryID {
     ProfitAndLoss,
 }
 
-fn create_factory(
-    id: FactoryID,
-    csv_filepath: PathBuf,
-    xlsx_filepath: PathBuf,
-) -> Box<dyn TemplateManager> {
+fn create_factory(id: FactoryID, xlsx_filepath: PathBuf) -> Box<dyn TemplateManager> {
     match id {
-        FactoryID::ProfitAndLoss => {
-            Box::new(ProfitAndLossManager::new(csv_filepath, xlsx_filepath))
-        }
+        FactoryID::ProfitAndLoss => Box::new(ProfitAndLossManager::new(xlsx_filepath)),
     }
 }
 
@@ -46,7 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn execute(csv_filepath: PathBuf, xlsx_filepath: PathBuf) -> Result<(), Box<dyn Error>> {
-    let factory = create_factory(FactoryID::ProfitAndLoss, csv_filepath, xlsx_filepath);
-    factory.excute()?;
+    let factory = create_factory(FactoryID::ProfitAndLoss, xlsx_filepath);
+    factory.excute(csv_filepath)?;
     Ok(())
 }
