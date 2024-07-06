@@ -1,13 +1,14 @@
-use super::super::template_pattern::{TemplateManager, TemplateStruct};
-use super::profit_and_loss::ProfitAndLoss;
-use crate::modules::excel::{cell_style::CellStyle, coordinate::Coordinate, lib::ExcelAccessor};
-use crate::modules::settings::SETTINGS;
+use super::{
+    super::template_pattern::{TemplateManager, TemplateStruct},
+    profit_and_loss::ProfitAndLoss,
+};
+use crate::modules::{
+    excel::{cell_style::CellStyle, coordinate::Coordinate, lib::ExcelAccessor},
+    settings::SETTINGS,
+};
 use chrono::NaiveDate;
 use csv::StringRecord;
-use std::cell::RefCell;
-use std::collections::BTreeMap;
-use std::error::Error;
-use std::path::PathBuf;
+use std::{cell::RefCell, collections::BTreeMap, error::Error, path::PathBuf};
 
 pub struct ProfitAndLossManager {
     template_struct: TemplateStruct,
@@ -31,7 +32,7 @@ impl ProfitAndLossManager {
 
         for (col_index, (key, _)) in header_list.iter().enumerate() {
             let col_index = col_index as u32 + SETTINGS.start_col;
-            let value = SETTINGS.headers.get(key).map(|x| x.clone());
+            let value = SETTINGS.headers.get(key).cloned();
             let background_color = SETTINGS.colors.get("header_background");
             let coordinate_item = (col_index, *row_index).new_coordinate();
             excel_accessor.write_cell(
@@ -48,7 +49,7 @@ impl ProfitAndLossManager {
         &self,
         excel_accessor: &mut ExcelAccessor,
         row_index: &mut u32,
-        profit_and_loss_list: Vec<ProfitAndLoss>,
+        profit_and_loss_list: &[ProfitAndLoss],
     ) -> Result<(i32, i32), Box<dyn Error>> {
         let mut specific_account_total = 0;
         let mut nisa_account_total = 0;
@@ -64,7 +65,7 @@ impl ProfitAndLossManager {
             }
 
             if let (Some(account), Some(realized_profit_and_loss)) = (
-                profit_and_loss.account,
+                profit_and_loss.account.as_deref(),
                 profit_and_loss.realized_profit_and_loss,
             ) {
                 if account.contains("特定") {
@@ -129,7 +130,7 @@ impl ProfitAndLossManager {
 
     fn get_footer_style(&self, field_name: &str, value: &Option<String>) -> CellStyle {
         let yen_format = SETTINGS.formats.get("yen");
-        let background_color = SETTINGS.colors.get("footer_background").clone();
+        let background_color = SETTINGS.colors.get("footer_background");
         let realized_loss_font_color = SETTINGS.colors.get("realized_loss_font");
 
         // background_color, font_format, font_color
@@ -172,22 +173,23 @@ impl TemplateManager for ProfitAndLossManager {
         let mut row_index = SETTINGS.start_row;
         self.write_header(&mut excel_accessor, &mut row_index)?;
 
-        for (_, profit_and_loss) in self.profit_and_loss_map.borrow_mut().iter() {
+        for (_, profit_and_loss_list) in self.profit_and_loss_map.borrow_mut().iter_mut() {
             // 取引履歴書き込み
             let (specific_account_total, nisa_account_total) =
-                self.write_records(&mut excel_accessor, &mut row_index, profit_and_loss.clone())?;
+                self.write_records(&mut excel_accessor, &mut row_index, profit_and_loss_list)?;
 
             self.write_footer(
                 &mut excel_accessor,
                 &mut row_index,
                 specific_account_total,
                 nisa_account_total,
-            )?
+            )?;
         }
 
         let len = ProfitAndLoss::new()?.get_all_fields().len() as u32;
         excel_accessor.adjust_column_widths(16.0, len)?;
         excel_accessor.save_book()?;
+
         Ok(())
     }
 }

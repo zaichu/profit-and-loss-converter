@@ -13,11 +13,11 @@ pub struct ExcelAccessor {
 
 impl ExcelAccessor {
     pub fn read_book(sheet_title: &str, xlsx_filepath: &PathBuf) -> Result<Self, Box<dyn Error>> {
-        let mut book = reader::xlsx::read(xlsx_filepath).expect("Failed to read xlsx");
+        let mut book = reader::xlsx::read(xlsx_filepath)?;
         if book.get_sheet_by_name(sheet_title).is_some() {
             book.remove_sheet_by_name(sheet_title)?;
         }
-        _ = book.new_sheet(sheet_title)?;
+        book.new_sheet(sheet_title)?;
         Ok(ExcelAccessor {
             book: RefCell::new(book),
             sheet_title: sheet_title.to_string(),
@@ -34,25 +34,23 @@ impl ExcelAccessor {
         if let Some(sheet) = self
             .book
             .borrow_mut()
-            .get_sheet_by_name_mut(self.sheet_title.as_str())
+            .get_sheet_by_name_mut(&self.sheet_title)
         {
             let cell = sheet.get_cell_mut((coordinate.col, coordinate.row));
             if let Some(value) = value {
                 cell.set_value(value);
             }
 
-            if let Some(format) = cell_style.font_format.clone() {
-                cell.get_style_mut()
-                    .get_number_format_mut()
-                    .set_format_code(format);
+            let style = cell.get_style_mut();
+            if let Some(format) = &cell_style.font_format {
+                style.get_number_format_mut().set_format_code(format);
             }
 
-            let style = cell.get_style_mut();
-            if let Some(background_color) = cell_style.background_color.clone() {
+            if let Some(background_color) = &cell_style.background_color {
                 style.set_background_color(background_color);
             }
 
-            if let Some(font_color) = cell_style.font_color.clone() {
+            if let Some(font_color) = &cell_style.font_color {
                 style.get_font_mut().get_color_mut().set_argb(font_color);
             }
 
@@ -73,17 +71,21 @@ impl ExcelAccessor {
     }
 
     pub fn adjust_column_widths(&mut self, width: f64, len: u32) -> Result<(), Box<dyn Error>> {
-        for index in SETTINGS.start_col..=SETTINGS.start_col + len {
-            if let Some(sheet) = self
-                .book
-                .borrow_mut()
-                .get_sheet_by_name_mut(self.sheet_title.as_str())
-            {
+        let start_col = SETTINGS.start_col;
+        let end_col = SETTINGS.start_col + len;
+
+        if let Some(sheet) = self
+            .book
+            .borrow_mut()
+            .get_sheet_by_name_mut(&self.sheet_title)
+        {
+            for index in start_col..=end_col {
                 sheet
                     .get_column_dimension_by_number_mut(&index)
                     .set_width(width);
             }
         }
+
         Ok(())
     }
 

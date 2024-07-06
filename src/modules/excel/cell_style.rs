@@ -12,9 +12,9 @@ impl CellStyle {
         font_color: Option<&String>,
     ) -> Self {
         CellStyle {
-            background_color: background_color.map(|s| s.clone()),
-            font_format: font_format.map(|s| s.clone()),
-            font_color: font_color.map(|s| s.clone()),
+            background_color: background_color.cloned(),
+            font_format: font_format.cloned(),
+            font_color: font_color.cloned(),
         }
     }
 }
