@@ -9,9 +9,9 @@ mod modules;
 #[derive(Parser)]
 struct Args {
     #[clap(name = "CSVFILE")]
-    csv_filepath: Option<PathBuf>,
+    csv_filepath: PathBuf,
     #[clap(name = "XLSXFILE")]
-    xlsx_filepath: Option<PathBuf>,
+    xlsx_filepath: PathBuf,
 }
 
 enum FactoryID {
@@ -27,20 +27,13 @@ fn create_factory(id: FactoryID, xlsx_filepath: PathBuf) -> Box<dyn TemplateMana
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    if let (Some(csv_filepath), Some(xlsx_filepath)) = (args.csv_filepath, args.xlsx_filepath) {
-        execute(csv_filepath, xlsx_filepath)?;
-    } else {
-        eprintln!(
-            "引数が不足しています。使用例: ./profit-and-loss-converter hogehoge.csv piyopiyo.xlsx"
-        );
-        std::process::exit(1);
-    }
+    // CSVファイルとXLSXファイルのパスを取得する
+    let csv_filepath = args.csv_filepath;
+    let xlsx_filepath = args.xlsx_filepath;
 
-    Ok(())
-}
-
-fn execute(csv_filepath: PathBuf, xlsx_filepath: PathBuf) -> Result<(), Box<dyn Error>> {
+    // ファクトリからTemplateManagerを生成して実行する
     let factory = create_factory(FactoryID::ProfitAndLoss, xlsx_filepath);
-    factory.excute(csv_filepath)?;
+    factory.execute(csv_filepath)?;
+
     Ok(())
 }
