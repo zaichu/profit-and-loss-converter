@@ -187,7 +187,7 @@ impl TemplateManager for ProfitAndLossManager {
         }
 
         let len = ProfitAndLoss::new()?.get_all_fields().len() as u32;
-        excel_accessor.adjust_column_widths(16.0, len)?;
+        excel_accessor.adjust_column_widths(len)?;
         excel_accessor.save_book()?;
 
         Ok(())
