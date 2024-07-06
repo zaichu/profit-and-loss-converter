@@ -23,7 +23,7 @@
         "withholding_tax": "源泉徴収税額",
         "profit_and_loss": "損益"
     },
-    "sheet_name": "株取引",
+    "sheet_title": "株取引",
     "tax_rate": 0.20315,
     "start_row": 2,
     "start_col": 2
