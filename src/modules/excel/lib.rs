@@ -70,7 +70,7 @@ impl ExcelAccessor {
         }
     }
 
-    pub fn adjust_column_widths(&mut self, width: f64, len: u32) -> Result<(), Box<dyn Error>> {
+    pub fn adjust_column_widths(&mut self, len: u32) -> Result<(), Box<dyn Error>> {
         let start_col = SETTINGS.start_col;
         let end_col = SETTINGS.start_col + len;
 
@@ -82,7 +82,7 @@ impl ExcelAccessor {
             for index in start_col..=end_col {
                 sheet
                     .get_column_dimension_by_number_mut(&index)
-                    .set_width(width);
+                    .set_auto_width(true);
             }
         }
 
