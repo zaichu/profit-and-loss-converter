@@ -1,6 +1,5 @@
 use super::super::template_pattern::{TemplateManager, TemplateStruct};
 use super::profit_and_loss::ProfitAndLoss;
-use crate::modules::csv::lib::CSVAccessor;
 use crate::modules::excel::{cell_style::CellStyle, coordinate::Coordinate, lib::ExcelAccessor};
 use crate::modules::settings::SETTINGS;
 use chrono::NaiveDate;
@@ -16,9 +15,9 @@ pub struct ProfitAndLossManager {
 }
 
 impl ProfitAndLossManager {
-    pub fn new(csv_filepath: PathBuf, xlsx_filepath: PathBuf) -> Self {
+    pub fn new(xlsx_filepath: PathBuf) -> Self {
         ProfitAndLossManager {
-            template_struct: TemplateStruct::new(csv_filepath, xlsx_filepath),
+            template_struct: TemplateStruct::new(xlsx_filepath),
             profit_and_loss_map: RefCell::new(BTreeMap::new()),
         }
     }
@@ -150,10 +149,6 @@ impl ProfitAndLossManager {
 }
 
 impl TemplateManager for ProfitAndLossManager {
-    fn get(&self) -> Result<Vec<StringRecord>, Box<dyn Error>> {
-        CSVAccessor::read(&self.template_struct.csv_filepath)
-    }
-
     fn set(&self, records: Vec<StringRecord>) -> Result<(), Box<dyn Error>> {
         for record in records {
             let profit_and_loss = ProfitAndLoss::from_record(record)?;
