@@ -9,7 +9,7 @@ pub struct Settings {
     pub formats: std::collections::HashMap<String, String>,
     pub colors: std::collections::HashMap<String, String>,
     pub headers: std::collections::HashMap<String, String>,
-    pub sheet_name: String,
+    pub sheet_title: String,
     pub tax_rate: f64,
     pub start_row: u32,
     pub start_col: u32,

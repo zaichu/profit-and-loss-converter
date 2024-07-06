@@ -1,6 +1,6 @@
 use clap::Parser;
-use modules::csv_reader::CSVReader;
-use modules::excel_writer::ExcelWriter;
+use modules::profit_and_loss::lib::ProfitAndLossManager;
+use modules::template_pattern::TemplateManager;
 use std::error::Error;
 use std::path::PathBuf;
 
@@ -12,6 +12,22 @@ struct Args {
     csv_filepath: Option<PathBuf>,
     #[clap(name = "XLSXFILE")]
     xlsx_filepath: Option<PathBuf>,
+}
+
+enum FactoryID {
+    ProfitAndLoss,
+}
+
+fn create_factory(
+    id: FactoryID,
+    csv_filepath: PathBuf,
+    xlsx_filepath: PathBuf,
+) -> Box<dyn TemplateManager> {
+    match id {
+        FactoryID::ProfitAndLoss => {
+            Box::new(ProfitAndLossManager::new(csv_filepath, xlsx_filepath))
+        }
+    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -30,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn execute(csv_filepath: PathBuf, xlsx_filepath: PathBuf) -> Result<(), Box<dyn Error>> {
-    let profit_and_loss = CSVReader::read_profit_and_loss(&csv_filepath)?;
-    ExcelWriter::update_sheet(profit_and_loss, &xlsx_filepath)?;
+    let factory = create_factory(FactoryID::ProfitAndLoss, csv_filepath, xlsx_filepath);
+    factory.excute()?;
     Ok(())
 }

@@ -1,4 +1,4 @@
-use super::settings::SETTINGS;
+use super::super::settings::SETTINGS;
 use chrono::NaiveDate;
 use csv::StringRecord;
 use std::error::Error;
@@ -57,7 +57,49 @@ impl ProfitAndLoss {
         })
     }
 
-    pub fn with_total_realized_profit_and_loss(
+    pub fn get_all_fields(&self) -> Vec<(String, Option<String>)> {
+        vec![
+            (
+                "trade_date".to_string(),
+                self.trade_date.map(|d| d.to_string()),
+            ),
+            (
+                "settlement_date".to_string(),
+                self.settlement_date.map(|d| d.to_string()),
+            ),
+            ("security_code".to_string(), self.security_code.clone()),
+            ("security_name".to_string(), self.security_name.clone()),
+            ("account".to_string(), self.account.clone()),
+            ("shares".to_string(), self.shares.map(|s| s.to_string())),
+            (
+                "asked_price".to_string(),
+                self.asked_price.map(|p| p.to_string()),
+            ),
+            ("proceeds".to_string(), self.proceeds.map(|p| p.to_string())),
+            (
+                "purchase_price".to_string(),
+                self.purchase_price.map(|p| p.to_string()),
+            ),
+            (
+                "realized_profit_and_loss".to_string(),
+                self.realized_profit_and_loss.map(|p| p.to_string()),
+            ),
+            (
+                "total_realized_profit_and_loss".to_string(),
+                self.total_realized_profit_and_loss.map(|p| p.to_string()),
+            ),
+            (
+                "withholding_tax".to_string(),
+                self.withholding_tax.map(|p| p.to_string()),
+            ),
+            (
+                "profit_and_loss".to_string(),
+                self.profit_and_loss.map(|p| p.to_string()),
+            ),
+        ]
+    }
+
+    pub fn new_total_realized_profit_and_loss(
         specific_account_total: i32,
         nisa_account_total: i32,
     ) -> Result<Self, Box<dyn Error>> {
@@ -83,48 +125,6 @@ impl ProfitAndLoss {
             withholding_tax: Some(withholding_tax),
             profit_and_loss: Some(total - withholding_tax as i32),
         })
-    }
-
-    pub fn get_profit_and_loss_struct_list(&self) -> Vec<(&str, Option<String>)> {
-        vec![
-            (
-                stringify!(trade_date),
-                self.trade_date.map(|d| d.to_string()),
-            ),
-            (
-                stringify!(settlement_date),
-                self.settlement_date.map(|d| d.to_string()),
-            ),
-            (stringify!(security_code), self.security_code.clone()),
-            (stringify!(security_name), self.security_name.clone()),
-            (stringify!(account), self.account.clone()),
-            (stringify!(shares), self.shares.map(|s| s.to_string())),
-            (
-                stringify!(asked_price),
-                self.asked_price.map(|p| p.to_string()),
-            ),
-            (stringify!(proceeds), self.proceeds.map(|p| p.to_string())),
-            (
-                stringify!(purchase_price),
-                self.purchase_price.map(|p| p.to_string()),
-            ),
-            (
-                stringify!(realized_profit_and_loss),
-                self.realized_profit_and_loss.map(|p| p.to_string()),
-            ),
-            (
-                stringify!(total_realized_profit_and_loss),
-                self.total_realized_profit_and_loss.map(|p| p.to_string()),
-            ),
-            (
-                stringify!(withholding_tax),
-                self.withholding_tax.map(|p| p.to_string()),
-            ),
-            (
-                stringify!(profit_and_loss),
-                self.profit_and_loss.map(|p| p.to_string()),
-            ),
-        ]
     }
 
     fn parse_date(date_str: Option<&str>) -> Result<Option<NaiveDate>, Box<dyn Error>> {
