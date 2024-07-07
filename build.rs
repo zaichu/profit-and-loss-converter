@@ -32,4 +32,8 @@ fn main() {
     // settings.json をビルド後のディレクトリにコピーする
     fs::copy(&src_file, &dest_file).expect("Failed to copy settings.json");
     println!("settings.json copied successfully!");
+
+    let csv_dir = out_dir.join("csv");
+    println!("Destination csv dirctory: {:?}", csv_dir);
+    fs::create_dir(&csv_dir).expect("Failed to copy settings.json");
 }
