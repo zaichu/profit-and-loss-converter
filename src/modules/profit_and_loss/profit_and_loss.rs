@@ -100,8 +100,7 @@ impl ProfitAndLoss {
     }
 
     pub fn new_total_realized_profit_and_loss(
-        specific_account_total: i32,
-        nisa_account_total: i32,
+        (specific_account_total, nisa_account_total): (i32, i32),
     ) -> Result<Self, Box<dyn Error>> {
         let withholding_tax = if specific_account_total < 0 {
             0

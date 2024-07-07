@@ -108,13 +108,9 @@ impl ProfitAndLossManager {
         &self,
         excel_accessor: &mut ExcelAccessor,
         row_index: &mut u32,
-        specific_account_total: i32,
-        nisa_account_total: i32,
+        total: (i32, i32),
     ) -> Result<(), Box<dyn Error>> {
-        let profit_and_loss = ProfitAndLoss::new_total_realized_profit_and_loss(
-            specific_account_total,
-            nisa_account_total,
-        )?;
+        let profit_and_loss = ProfitAndLoss::new_total_realized_profit_and_loss(total)?;
         for (col_index, (field_name, value)) in profit_and_loss.get_all_fields().iter().enumerate()
         {
             let coordinate_item =
@@ -175,15 +171,10 @@ impl TemplateManager for ProfitAndLossManager {
 
         for (_, profit_and_loss_list) in self.profit_and_loss_map.borrow_mut().iter_mut() {
             // 取引履歴書き込み
-            let (specific_account_total, nisa_account_total) =
+            let total =
                 self.write_records(&mut excel_accessor, &mut row_index, profit_and_loss_list)?;
 
-            self.write_footer(
-                &mut excel_accessor,
-                &mut row_index,
-                specific_account_total,
-                nisa_account_total,
-            )?;
+            self.write_footer(&mut excel_accessor, &mut row_index, total)?;
         }
 
         let len = ProfitAndLoss::new()?.get_all_fields().len() as u32;
