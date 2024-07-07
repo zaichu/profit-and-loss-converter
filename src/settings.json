@@ -26,5 +26,7 @@
     "sheet_title": "株取引",
     "tax_rate": 0.20315,
     "start_row": 2,
-    "start_col": 2
+    "start_col": 2,
+    "prefix_profit_and_loss": "realized_pl",
+    "prefix_dividendlist": "dividendlist"
 }

@@ -13,6 +13,8 @@ pub struct Settings {
     pub tax_rate: f64,
     pub start_row: u32,
     pub start_col: u32,
+    pub prefix_profit_and_loss: String,
+    pub prefix_dividendlist: String,
 }
 
 impl Settings {
