@@ -3,7 +3,7 @@ use crate::modules::settings::SETTINGS;
 use std::cell::RefCell;
 use std::error::Error;
 use std::path::PathBuf;
-use umya_spreadsheet::{self, reader, writer, Border, Spreadsheet};
+use umya_spreadsheet::{self, new_file_empty_worksheet, reader, writer, Border, Spreadsheet};
 
 pub struct ExcelAccessor {
     book: RefCell<Spreadsheet>,
@@ -13,7 +13,12 @@ pub struct ExcelAccessor {
 
 impl ExcelAccessor {
     pub fn read_book(sheet_title: &str, xlsx_filepath: &PathBuf) -> Result<Self, Box<dyn Error>> {
-        let mut book = reader::xlsx::read(xlsx_filepath)?;
+        let book = reader::xlsx::read(xlsx_filepath);
+        let mut book = match book {
+            Ok(book) => book,
+            Err(_) => new_file_empty_worksheet(),
+        };
+
         if book.get_sheet_by_name(sheet_title).is_some() {
             book.remove_sheet_by_name(sheet_title)?;
         }
