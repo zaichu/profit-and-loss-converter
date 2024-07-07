@@ -34,6 +34,7 @@ fn main() {
     println!("settings.json copied successfully!");
 
     let csv_dir = out_dir.join("csv");
+
     println!("Destination csv dirctory: {:?}", csv_dir);
-    fs::create_dir(&csv_dir).expect("Failed to copy settings.json");
+    let _ = fs::create_dir(&csv_dir);
 }
