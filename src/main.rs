@@ -1,4 +1,5 @@
 use clap::Parser;
+use modules::dividend_list::lib::DividendListManager;
 use modules::profit_and_loss::lib::ProfitAndLossManager;
 use modules::settings::SETTINGS;
 use modules::template_pattern::TemplateManager;
@@ -23,7 +24,7 @@ enum FactoryID {
 fn create_factory(id: FactoryID, xlsx_filepath: PathBuf) -> Box<dyn TemplateManager> {
     match id {
         FactoryID::ProfitAndLoss => Box::new(ProfitAndLossManager::new(xlsx_filepath)),
-        FactoryID::DividendList => panic!(""),
+        FactoryID::DividendList => Box::new(DividendListManager::new(xlsx_filepath)),
     }
 }
 
